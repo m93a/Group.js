@@ -1,20 +1,31 @@
+import { isNonnegativeInteger } from './utils';
 
-function isNonnegativeInteger(n: number): boolean {
-    return typeof n === 'number' && n === (n|0) && n > 0
-}
-
-export class MultiplicationTable {
+export class MultiplicationTable<T> {
     private _size: number
-    public get size() { return this._size }
+    get size() { return this._size }
 
-    constructor (public data: number[][]) {
-        MultiplicationTable.validateData(data)
+    /** Quickly find the index of an element */
+    readonly indexMap: Map<T, number>
+
+    constructor (public readonly elements: T[], public readonly data: T[][]) {
+        this.validate()
         this._size = data.length
+
+        this.indexMap = new Map(elements.map((g, i) => [g, i]))
     }
 
-    static validateData(data: number[][]): void {
+    private validate() {
+        const { elements, data } = this
+
+        if (!Array.isArray(elements)) throw new TypeError('List of elements must be an array.')
         if (!Array.isArray(data)) throw new TypeError('Multiplication table data must be an array.')
-        const size = data.length
+        if (elements.length !== data.length) throw new TypeError('Multiplication table must have as many rows as there are elements.')
+        if ((new Set(elements).size !== elements.length)) throw new TypeError('List of elements must not contain duplicate items.')
+
+        if (elements.includes(undefined as any) || elements.includes(null as any) || elements.includes(NaN as any))
+            throw new TypeError('NaN, null and undefined are not allowed as elements.')
+
+        const size = elements.length
 
         for (let i = 0; i < size; i++) {
             const row = data[i]
@@ -22,42 +33,38 @@ export class MultiplicationTable {
             if (row.length !== size) throw new TypeError('The multiplication table must be square.')
 
             for (let j = 0; j < size; j++) {
-                const el = row[j];
-                if (!isNonnegativeInteger(el)) throw new TypeError('Each element of the multiplication table must be a nonnegative integer.')
-                if (el >= size) throw new TypeError('Each element must be less than the size of the multiplication table.')
+                if (elements.indexOf(row[j]) === -1) throw new TypeError('The multiplication table contains an unknown element.')
             }
         }
     }
 
-    /** Quick multiplication without type checks */
-    _mul = (a: number, b: number) => this.data[a][b];
+    multiply(a: T, b: T): T {
+        const { data, indexMap } = this
 
-    multiply(a: number, b: number): number {
-        const { size, data } = this
+        if (!indexMap.has(a) || indexMap.has(b)) throw new TypeError('The elements to multiply were not found in the table.')
 
-        if (!isNonnegativeInteger(a) || !isNonnegativeInteger(b)) throw TypeError('Arguments must be nonnegative integers.')
-        if (a >= size || b >= size) throw TypeError('Arguments must be smaller than the size of the table.')
-
-        return data[a][b];
+        return data[indexMap.get(a)!][indexMap.get(b)!];
     }
 
+    mul = this.multiply.bind(this)
+
     isRearangable(): boolean {
-        const { size, _mul } = this
+        const { elements, size, mul, indexMap } = this
         const rowAttendance = Array<boolean>(size)
         const colAttendance = Array<boolean>(size)
 
-        for (let a = 0; a < size; a++) {
+        for (let a of elements) {
             rowAttendance.fill(false)
             colAttendance.fill(false)
 
-            for (let b = 0; b < size; b++) {
-                const c = _mul(a, b)
-                if (rowAttendance[c]) return false
-                rowAttendance[c] = true
+            for (let b of elements) {
+                const i = indexMap.get(mul(a, b))!
+                if (rowAttendance[i]) return false
+                rowAttendance[i] = true
 
-                const d = _mul(b, a)
-                if (colAttendance[d]) return false
-                colAttendance[d] = true
+                const j = indexMap.get(mul(b, a))!
+                if (colAttendance[j]) return false
+                colAttendance[j] = true
             }
         }
 
@@ -65,25 +72,25 @@ export class MultiplicationTable {
     }
 
     isAssociative(): boolean {
-        const { size, _mul } = this
+        const { elements, mul } = this
 
-        for (let a = 0; a < size; a++)
-        for (let b = 0; b < size; b++)
-        for (let c = 0; c < size; c++) {
-            if (_mul(a, _mul(b, c)) !== _mul(_mul(a, b), c)) return false
+        for (let a of elements)
+        for (let b of elements)
+        for (let c of elements) {
+            if (mul(a, mul(b, c)) !== mul(mul(a, b), c)) return false
         }
 
         return true
     }
 
-    findLeftIdentities(): number[] {
-        const { size, _mul } = this
-        const identities: number[] = []
+    findLeftIdentities(): T[] {
+        const { elements, mul } = this
+        const identities: T[] = []
 
         outer:
-        for (let e = 0; e < size; e++) {
-            for (let x = 0; x < size; x++) {
-                if (_mul(e, x) !== x) continue outer
+        for (let e of elements) {
+            for (let x of elements) {
+                if (mul(e, x) !== x) continue outer
             }
             identities.push(e)
         }
@@ -91,14 +98,14 @@ export class MultiplicationTable {
         return identities
     }
 
-    findRightIdentities(): number[] {
-        const { size, _mul } = this
-        const identities: number[] = []
+    findRightIdentities(): T[] {
+        const { elements, mul } = this
+        const identities: T[] = []
 
         outer:
-        for (let e = 0; e < size; e++) {
-            for (let x = 0; x < size; x++) {
-                if (_mul(x, e) !== x) continue outer
+        for (let e of elements) {
+            for (let x of elements) {
+                if (mul(x, e) !== x) continue outer
             }
             identities.push(e)
         }
@@ -107,14 +114,14 @@ export class MultiplicationTable {
     }
 
     /** Find the unique both-sided identity */
-    findIdentity(): number | null {
-        const { size, _mul } = this
-        let identity: number | null = null
+    findIdentity(): T | null {
+        const { elements, mul } = this
+        let identity: T | null = null
 
         findLeftIdentity:
-        for (let e = 0; e < size; e++) {
-            for (let x = 0; x < size; x++) {
-                if (_mul(e, x) !== x) continue findLeftIdentity
+        for (let e of elements) {
+            for (let x of elements) {
+                if (mul(e, x) !== x) continue findLeftIdentity
             }
             identity = e
             break
@@ -123,21 +130,21 @@ export class MultiplicationTable {
         if (identity === null) return null
 
         // verify it is also a right identity
-        for (let x = 0; x < size; x++) {
-            if (_mul(x, identity) !== x) return null
+        for (let x of elements) {
+            if (mul(x, identity) !== x) return null
         }
 
         return identity
     }
 
-    findLeftAbsorbers(): number[] {
-        const { size, _mul } = this
-        const absorbers: number[] = []
+    findLeftAbsorbers(): T[] {
+        const { elements, mul } = this
+        const absorbers: T[] = []
 
         outer:
-        for (let z = 0; z < size; z++) {
-            for (let x = 0; x < size; x++) {
-                if (_mul(z, x) !== z) continue outer
+        for (let z of elements) {
+            for (let x of elements) {
+                if (mul(z, x) !== z) continue outer
             }
             absorbers.push(z)
         }
@@ -145,14 +152,14 @@ export class MultiplicationTable {
         return absorbers
     }
 
-    findRightAbsorbers(): number[] {
-        const { size, _mul } = this
-        const absorbers: number[] = []
+    findRightAbsorbers(): T[] {
+        const { elements, mul } = this
+        const absorbers: T[] = []
 
         outer:
-        for (let z = 0; z < size; z++) {
-            for (let x = 0; x < size; x++) {
-                if (_mul(x, z) !== z) continue outer
+        for (let z of elements) {
+            for (let x of elements) {
+                if (mul(x, z) !== z) continue outer
             }
             absorbers.push(z)
         }
@@ -161,14 +168,14 @@ export class MultiplicationTable {
     }
 
     /** Find the unique both-sided absorber */
-    findAbsorber(): number | null {
-        const { size, _mul } = this
-        let absorber: number | null = null
+    findAbsorber(): T | null {
+        const { elements, mul } = this
+        let absorber: T | null = null
 
         findLeftAbsorber:
-        for (let z = 0; z < size; z++) {
-            for (let x = 0; x < size; x++) {
-                if (_mul(z, x) !== z) continue findLeftAbsorber
+        for (let z of elements) {
+            for (let x of elements) {
+                if (mul(z, x) !== z) continue findLeftAbsorber
             }
             absorber = z
             break
@@ -177,36 +184,34 @@ export class MultiplicationTable {
         if (absorber === null) return null
 
         // verify it is also a right absorber
-        for (let x = 0; x < size; x++) {
-            if (_mul(x, absorber) !== absorber) return null
+        for (let x of elements) {
+            if (mul(x, absorber) !== absorber) return null
         }
 
         return absorber
     }
 
     /** Find x, such that xa = b */
-    solveLeft(a: number, b: number): number | null {
-        const { size, _mul } = this
+    solveLeft(a: T, b: T): T | null {
+        const { elements, mul, indexMap } = this
 
-        if (!isNonnegativeInteger(a) || !isNonnegativeInteger(b)) throw TypeError('Arguments must be nonnegative integers.')
-        if (a >= size || b >= size) throw TypeError('Arguments must be smaller than the size of the table.')
+        if (!indexMap.has(a) || !indexMap.has(b)) throw new TypeError('Cannot solve for an unknown element.')
 
-        for (let x = 0; x < size; x++) {
-            if (_mul(x, a) == b) return x
+        for (let x of elements) {
+            if (mul(x, a) == b) return x
         }
 
         return null
     }
 
     /** Find x, such that ax = b */
-    solveRight(a: number, b: number): number | null {
-        const { size, _mul } = this
+    solveRight(a: T, b: T): T | null {
+        const { elements, mul, indexMap } = this
 
-        if (!isNonnegativeInteger(a) || !isNonnegativeInteger(b)) throw TypeError('Arguments must be nonnegative integers.')
-        if (a >= size || b >= size) throw TypeError('Arguments must be smaller than the size of the table.')
+        if (!indexMap.has(a) || !indexMap.has(b)) throw new TypeError('Cannot solve for an unknown element.')
 
-        for (let x = 0; x < size; x++) {
-            if (_mul(a, x) == b) return x
+        for (let x of elements) {
+            if (mul(a, x) == b) return x
         }
 
         return null
