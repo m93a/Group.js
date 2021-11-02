@@ -1,2 +1,2 @@
-# Group.js
+# groups.js
 Group-theoretical JavaScript library
