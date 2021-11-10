@@ -2,3 +2,14 @@
 # yarn lockfile v1
 
 
+"@m93a/arithmetic-types@^0.0.11":
+  version "0.0.11"
+  resolved "https://registry.yarnpkg.com/@m93a/arithmetic-types/-/arithmetic-types-0.0.11.tgz#70020e3ec4df3d91320aa66d35784e2d6c324533"
+  integrity sha512-Y+kYav9rE0OIcMfihdcnQIXjY7IQiAsXKuxBgFnbDicTieLLHaFTWt/dBLGJ3zehq1lj64kNRCZkRpGhQfgzCQ==
+
+densematrix.js@^0.0.0:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/densematrix.js/-/densematrix.js-0.0.0.tgz#c4380e02a5c99c46f33e76c8c77f057e64888e26"
+  integrity sha512-ZV01axbq2gxpDdf3OlctSYqt1Tw2HmbwNNzWTLewKFvRMn52ZpGOtFzFcReRxASyLdHoCpPJQhAfJenOvNqdxg==
+  dependencies:
+    "@m93a/arithmetic-types" "^0.0.11"

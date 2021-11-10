@@ -41,7 +41,7 @@ export class MultiplicationTable<T> {
     multiply(a: T, b: T): T {
         const { data, indexMap } = this
 
-        if (!indexMap.has(a) || indexMap.has(b)) throw new TypeError('The elements to multiply were not found in the table.')
+        if (!indexMap.has(a) || !indexMap.has(b)) throw new TypeError(`The elements to multiply were not found in the table. (${a}, ${b})`)
 
         return data[indexMap.get(a)!][indexMap.get(b)!];
     }

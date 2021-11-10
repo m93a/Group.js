@@ -1,4 +1,7 @@
 {
     "name": "groups.js",
-    "author": "Michal Grňo"
+    "author": "Michal Grňo",
+    "dependencies": {
+        "densematrix.js": "^0.0.0"
+    }
 }
